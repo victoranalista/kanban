@@ -8,18 +8,12 @@ import {
   blockIp,
   log
 } from '@/lib/middleware/utils';
-import {
-  apiTokenMiddleware,
-  isApiRoute,
-  isWebhookRoute,
-  webhookMiddleware
-} from '@/lib/middleware/apiTokenMiddleware';
 import { redis, redisPrefix } from './lib/redis';
 
 export default async function proxy(request: NextRequest) {
 
 return NextResponse.next();
-  const { pathname } = request.nextUrl;
+ /* const { pathname } = request.nextUrl;
   const isWebhook = isWebhookRoute(pathname);
   const isExternalApiRoute = pathname.startsWith('/api/bankBb') || isWebhook;
   const isUploadRoute = pathname.startsWith('/file/upload');
@@ -45,7 +39,7 @@ return NextResponse.next();
   }
   if (isApiRoute(pathname)) return await apiTokenMiddleware(request);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
- // return auth(request as any);
+ // return auth(request as any);*/
 }
 
 const rateLimitMiddleware = async (
