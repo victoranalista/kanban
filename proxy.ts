@@ -17,6 +17,8 @@ import {
 import { redis, redisPrefix } from './lib/redis';
 
 export default async function proxy(request: NextRequest) {
+
+return NextResponse.next();
   const { pathname } = request.nextUrl;
   const isWebhook = isWebhookRoute(pathname);
   const isExternalApiRoute = pathname.startsWith('/api/bankBb') || isWebhook;
@@ -43,7 +45,7 @@ export default async function proxy(request: NextRequest) {
   }
   if (isApiRoute(pathname)) return await apiTokenMiddleware(request);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return auth(request as any);
+ // return auth(request as any);
 }
 
 const rateLimitMiddleware = async (

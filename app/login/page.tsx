@@ -15,7 +15,7 @@ export default function LoginPage() {
         <DarkMode />
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-center md:h-screen space-y-8 md:space-y-0 md:space-x-16">
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold">catarina</h1>
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold">Ohno</h1>
         <Card className="w-full max-w-sm">
           <CardHeader>
             <CardTitle className="text-2xl">Login</CardTitle>
@@ -26,7 +26,7 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter>
             <p className="text-xs text-muted-foreground text-center w-full">
-              Financial Management System
+              Agile methodology system
             </p>
           </CardFooter>
         </Card>

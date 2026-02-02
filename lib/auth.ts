@@ -5,7 +5,6 @@ import Google from 'next-auth/providers/google';
 import { prismaNeon } from './prismaNeon';
 import { Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
-import { emailsAllowedToTx } from '../app/settings/users/security/actions/whitelist';
 
 const prisma = prismaNeon;
 
@@ -75,8 +74,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (pathname.startsWith('/posting')) {
         if (
           auth.user.role !== 'ADMIN' ||
-          !auth.user.email ||
-          !emailsAllowedToTx.includes(auth.user.email)
+          !auth.user.email
         ) {
           const url = request.nextUrl.clone();
           url.pathname = '/unauthorized';

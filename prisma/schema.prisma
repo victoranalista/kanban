@@ -59,3 +59,48 @@ enum SaleOrigin {
   PROCEDURAL_LAW
   ADMINISTRATIVE
 }
+
+model KanbanBoard {
+  id         String       @id @default(cuid())
+  saleOrigin SaleOrigin   @unique
+  teamSize   Int          @default(3)
+  columns    KanbanColumn[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([saleOrigin])
+}
+
+model KanbanColumn {
+  id        String       @id @default(cuid())
+  boardId   String
+  board     KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int
+  wipLimit  Int?
+  cards     KanbanCard[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([boardId, order])
+  @@index([boardId])
+}
+
+model KanbanCard {
+  id                 String       @id @default(cuid())
+  columnId           String
+  column             KanbanColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  name               String
+  specification      String       @db.Text
+  objective          String       @db.Text
+  acceptanceCriteria String       @db.Text
+  estimatedHours     Int
+  position           Float
+  isNext             Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([columnId])
+  @@index([columnId, position])
+  @@index([isNext])
+}
