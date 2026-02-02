@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model User {
+  id         Int              @id @default(autoincrement())
+  taxpayerId String           @unique
+  status     ActivationStatus
+  versions   UserHistory[]    @relation("UserToUserHistories")
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([status])
+}
+
+model UserHistory {
+  id             Int              @id @default(autoincrement())
+  version        Int              @default(1)
+  name           String
+  email          String
+  role           Role
+  password       String?
+  totpSecret     String?
+  totpEnabled    Boolean          @default(false)
+  totpVerifiedAt DateTime?
+  status         ActivationStatus
+  userId         Int
+  user           User             @relation("UserToUserHistories", fields: [userId], references: [id], onDelete: Restrict)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([userId, version])
+  @@index([version])
+  @@index([userId])
+  @@index([email, status])
+}
+
+enum ActivationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Role {
+  ADMIN
+  USER
+  API
+}
+
+enum SaleOrigin {
+  INTERNATIONAL_LAW
+  FAMILY_LAW
+  BANKING_LAW
+  PROCEDURAL_LAW
+  ADMINISTRATIVE
+}
