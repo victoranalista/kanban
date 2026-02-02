@@ -77,47 +77,13 @@ const handleAppMention = async (event: SlackMessageEvent) => {
       await postSlackMessage(channel, "⚠️ Você não tem permissão para criar cards neste canal.", undefined, ts)
       return
     }
+    const cleanMessage = text.replace(/<@[A-Z0-9]+>/g, "").trim()
+    if (cleanMessage.length < 10) {
+      await postSlackMessage(channel, "📝 Por favor, descreva a funcionalidade ou problema com mais detalhes (mínimo 10 caracteres).", undefined, ts)
+      return
+    }
+    await postSlackMessage(channel, "🔄 Processando sua solicitação...", undefined, ts)
     console.log("[App Mention] Generating cards...")
-    const cards = await generateCardsFromSlackMessage(text, saleOrigin)
-    const approvalId = createId()
-    storePendingApproval({
-      id: approvalId,
-      channelId: channel,
-      userId: user,
-      threadTs: ts,
-      cards,
-      saleOrigin,
-      status: "pending",
-      createdAt: new Date(),
-    })
-    console.log("[App Mention] Cards generated:", cards.length, "Approval ID:", approvalId)
-    const blocks = buildCardsPreviewBlocks(cards, approvalId)
-    await postSlackMessage(channel, "📋 Cards gerados! Revise e aprove:", blocks, ts)
-  } catch (error) {
-    console.error("[App Mention] Error:", error)
-    await postSlackMessage(event.channel, "❌ Erro ao processar sua solicitação.", undefined, event.ts)
-  }
-}
-    await postSlackMessage(
-      channel,
-      "⚠️ Você não tem permissão para criar cards neste canal. Apenas assistentes e substitutos podem usar este bot.",
-      undefined,
-      ts
-    )
-    return
-  }
-  const cleanMessage = text.replace(/<@[A-Z0-9]+>/g, "").trim()
-  if (cleanMessage.length < 10) {
-    await postSlackMessage(
-      channel,
-      "📝 Por favor, descreva a funcionalidade ou problema com mais detalhes (mínimo 10 caracteres).",
-      undefined,
-      ts
-    )
-    return
-  }
-  await postSlackMessage(channel, "🔄 Processando sua solicitação...", undefined, ts)
-  try {
     const cards = await generateCardsFromSlackMessage(cleanMessage)
     if (cards.length === 0) {
       await postSlackMessage(channel, "⚠️ Não foi possível gerar cards. Tente reformular sua solicitação.", undefined, ts)
@@ -127,19 +93,21 @@ const handleAppMention = async (event: SlackMessageEvent) => {
     storePendingApproval({
       id: approvalId,
       channelId: channel,
-      threadTs: ts,
       userId: user,
-      saleOrigin,
+      threadTs: ts,
       cards,
+      saleOrigin,
       originalMessage: cleanMessage,
-      createdAt: new Date(),
       status: "pending",
+      createdAt: new Date(),
     })
-    const blocks = buildCardsPreviewBlocks(cards, saleOrigin, approvalId)
+    console.log("[App Mention] Cards generated:", cards.length, "Approval ID:", approvalId)
+    const blocks = buildCardsPreviewBlocks(cards, saleOrigin.toString(), approvalId)
     await postSlackMessage(channel, `📋 ${cards.length} card(s) gerado(s) - aguardando aprovação`, blocks, ts)
   } catch (error) {
+    console.error("[App Mention] Error:", error)
     const message = error instanceof Error ? error.message : "Erro desconhecido"
-    await postSlackMessage(channel, "", buildErrorBlocks(message), ts)
+    await postSlackMessage(event.channel, "", buildErrorBlocks(message), event.ts)
   }
 }
 
@@ -153,15 +121,19 @@ const handleThreadReply = async (event: SlackMessageEvent) => {
   try {
     const refinedCards = await refineCardsFromFeedback(approval.cards, text)
     const newApprovalId = createId()
-    updatePendingApproval(approval.id, { cards: refinedCards, status: "pending" })
-    storePendingApproval({
-      ...approval,
-      id: newApprovalId,
-      cards: refinedCards,
-      status: "pending",
-    })
     deletePendingApproval(approval.id)
-    const blocks = buildCardsPreviewBlocks(refinedCards, approval.saleOrigin, newApprovalId)
+    storePendingApproval({
+      id: newApprovalId,
+      channelId: channel,
+      userId: user,
+      threadTs: thread_ts,
+      cards: refinedCards,
+      saleOrigin: approval.saleOrigin,
+      originalMessage: approval.originalMessage,
+      status: "pending",
+      createdAt: new Date(),
+    })
+    const blocks = buildCardsPreviewBlocks(refinedCards, approval.saleOrigin.toString(), newApprovalId)
     await postSlackMessage(channel, `📋 ${refinedCards.length} card(s) atualizado(s) - aguardando aprovação`, blocks, thread_ts)
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao processar alterações"
