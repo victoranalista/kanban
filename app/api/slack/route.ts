@@ -18,6 +18,14 @@ import {
 } from "./lib/pending-store"
 import { SlackEventCallback, SlackUrlVerification, SlackMessageEvent } from "./types"
 
+export const GET = async () => {
+  return NextResponse.json({ 
+    status: "ok", 
+    message: "Slack webhook is ready",
+    timestamp: new Date().toISOString() 
+  })
+}
+
 export const POST = async (request: NextRequest) => {
   try {
     const body = await request.text()
