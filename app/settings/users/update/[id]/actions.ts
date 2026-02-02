@@ -6,7 +6,6 @@ import { validationSchema } from '../../edit/[id]/validationSchema';
 import bcrypt from 'bcryptjs';
 import { requireSession } from '@/lib/requireSession';
 import { UpdateUserDataInput } from '../../types';
-import { logSecurityEvent, checkAdminQuota } from '@/lib/auditSecurity';
 import { normalizeDocument } from '@/lib/validators';
 
 const checkTaxpayerIdUniqueness = async (
@@ -57,29 +56,6 @@ export const updateUserDataAction = async (data: UpdateUserDataInput) => {
         message: 'Apenas o próprio admin pode trocar sua senha'
       };
     if (targetUser.role !== Role.ADMIN && validBody.role === Role.ADMIN) {
-      const adminQuota = await checkAdminQuota();
-      if (!adminQuota.allowed) {
-        await logSecurityEvent({
-          userId: currentUser.email || 'unknown',
-          action: 'PROMOTE_TO_ADMIN_REJECTED',
-          resource: `user:${targetUser.email}`,
-          oldValue: targetUser.role,
-          newValue: 'ADMIN',
-          success: false
-        });
-        return {
-          success: false,
-          message: `Não é possível promover mais usuários a administradores. Limite atingido (${adminQuota.current}/${adminQuota.limit}).`
-        };
-      }
-      await logSecurityEvent({
-        userId: currentUser.email || 'unknown',
-        action: 'PRIVILEGE_ESCALATION',
-        resource: `user:${targetUser.email}`,
-        oldValue: targetUser.role,
-        newValue: 'ADMIN',
-        success: true
-      });
     }
     try {
       const normalizedTaxpayerId = normalizeDocument(validBody.taxpayerId);

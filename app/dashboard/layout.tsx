@@ -134,13 +134,13 @@ function MobileNav(props: { role?: string }) {
           <span className="sr-only">CC Ohno</span>
           {role === 'ADMIN' && (
             <Link
-              href={labelsAndLinks.posting.link}
+              href={labelsAndLinks.kanban.link}
               className="flex items-center gap-4 px-2.5 text-foreground"
               prefetch={true}
               passHref
             >
               <Wallet className="h-5 w-5" />
-              {labelsAndLinks.posting.label}
+              {labelsAndLinks.kanban.label}
             </Link>
           )}
           {role === 'ADMIN' && (
