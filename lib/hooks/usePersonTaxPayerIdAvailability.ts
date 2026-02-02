@@ -3,7 +3,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { UserFormValues, EditFormValues } from '../../app/settings/users/types';
 import { validateCpf } from '@/lib/validators';
 import debounce from 'lodash.debounce';
-import { checkTaxpayerIdAvailability } from 'app/settings/users/availability/actions';
+import { checkTaxpayerIdAvailability } from '@/app/settings/users/availability/actions';
 import { Role } from '@prisma/client';
 
 type SetErrorFn = (message: string) => void;

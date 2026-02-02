@@ -1,4 +1,4 @@
-import AppLoading from '../loading';
+import AppLoading from './loading';
 
 export default function Loading() {
   return <AppLoading />;
