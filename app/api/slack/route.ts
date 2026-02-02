@@ -19,21 +19,32 @@ import {
 import { SlackEventCallback, SlackUrlVerification, SlackMessageEvent } from "./types"
 
 export const POST = async (request: NextRequest) => {
-  const body = await request.text()
-  const timestamp = request.headers.get("x-slack-request-timestamp") || ""
-  const signature = request.headers.get("x-slack-signature") || ""
-  if (process.env.NODE_ENV === "production") {
-    const isValid = await verifySlackSignature(signature, timestamp, body)
-    if (!isValid) return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+  try {
+    const body = await request.text()
+    console.log("[Slack Webhook] Received request:", { bodyLength: body.length })
+    const timestamp = request.headers.get("x-slack-request-timestamp") || ""
+    const signature = request.headers.get("x-slack-signature") || ""
+    if (process.env.NODE_ENV === "production") {
+      const isValid = await verifySlackSignature(signature, timestamp, body)
+      if (!isValid) {
+        console.error("[Slack Webhook] Invalid signature")
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+      }
+    }
+    const payload = JSON.parse(body)
+    console.log("[Slack Webhook] Payload type:", payload.type)
+    if (payload.type === "url_verification") {
+      return handleUrlVerification(payload as SlackUrlVerification)
+    }
+    if (payload.type === "event_callback") {
+      console.log("[Slack Webhook] Event type:", payload.event?.type)
+      return handleEventCallback(payload as SlackEventCallback)
+    }
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error("[Slack Webhook] Error:", error)
+    return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
-  const payload = JSON.parse(body)
-  if (payload.type === "url_verification") {
-    return handleUrlVerification(payload as SlackUrlVerification)
-  }
-  if (payload.type === "event_callback") {
-    return handleEventCallback(payload as SlackEventCallback)
-  }
-  return NextResponse.json({ ok: true })
 }
 
 const handleUrlVerification = (payload: SlackUrlVerification) => {
@@ -51,13 +62,42 @@ const handleEventCallback = async (payload: SlackEventCallback) => {
 }
 
 const handleAppMention = async (event: SlackMessageEvent) => {
-  const { channel, user, text, ts } = event
-  const saleOrigin = getSaleOriginFromChannel(channel)
-  if (!saleOrigin) {
-    await postSlackMessage(channel, "⚠️ Este canal não está configurado para o Kanban.", undefined, ts)
-    return
+  try {
+    const { channel, user, text, ts } = event
+    console.log("[App Mention] Channel:", channel, "User:", user, "Text:", text)
+    const saleOrigin = getSaleOriginFromChannel(channel)
+    if (!saleOrigin) {
+      console.log("[App Mention] Channel not configured:", channel)
+      await postSlackMessage(channel, "⚠️ Este canal não está configurado para o Kanban.", undefined, ts)
+      return
+    }
+    console.log("[App Mention] SaleOrigin:", saleOrigin)
+    if (!isUserAllowedInChannel(channel, user)) {
+      console.log("[App Mention] User not allowed:", user)
+      await postSlackMessage(channel, "⚠️ Você não tem permissão para criar cards neste canal.", undefined, ts)
+      return
+    }
+    console.log("[App Mention] Generating cards...")
+    const cards = await generateCardsFromSlackMessage(text, saleOrigin)
+    const approvalId = createId()
+    storePendingApproval({
+      id: approvalId,
+      channelId: channel,
+      userId: user,
+      threadTs: ts,
+      cards,
+      saleOrigin,
+      status: "pending",
+      createdAt: new Date(),
+    })
+    console.log("[App Mention] Cards generated:", cards.length, "Approval ID:", approvalId)
+    const blocks = buildCardsPreviewBlocks(cards, approvalId)
+    await postSlackMessage(channel, "📋 Cards gerados! Revise e aprove:", blocks, ts)
+  } catch (error) {
+    console.error("[App Mention] Error:", error)
+    await postSlackMessage(event.channel, "❌ Erro ao processar sua solicitação.", undefined, event.ts)
   }
-  if (!isUserAllowedInChannel(channel, user)) {
+}
     await postSlackMessage(
       channel,
       "⚠️ Você não tem permissão para criar cards neste canal. Apenas assistentes e substitutos podem usar este bot.",
