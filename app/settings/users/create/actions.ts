@@ -5,35 +5,11 @@ import bcrypt from 'bcryptjs';
 import { UserFormValues } from '../types';
 import { requireSession } from '@/lib/requireSession';
 import { Role } from '@prisma/client';
-import { logSecurityEvent, checkAdminQuota } from '@/lib/auditSecurity';
 
 export async function createUserAction(data: UserFormValues) {
-  const currentUser = await requireSession([Role.ADMIN]);
+  await requireSession([Role.ADMIN]);
   try {
     const validated = validationSchema.parse(data);
-    if (validated.role === Role.ADMIN) {
-      const adminQuota = await checkAdminQuota();
-      if (!adminQuota.allowed) {
-        await logSecurityEvent({
-          userId: currentUser.email || 'unknown',
-          action: 'CREATE_ADMIN_REJECTED',
-          resource: `user:${validated.email}`,
-          newValue: 'ADMIN',
-          success: false
-        });
-        return {
-          success: false,
-          message: `Limite de administradores atingido (${adminQuota.current}/${adminQuota.limit}). Contate o suporte técnico.`
-        };
-      }
-      await logSecurityEvent({
-        userId: currentUser.email || 'unknown',
-        action: 'CREATE_ADMIN',
-        resource: `user:${validated.email}`,
-        newValue: 'ADMIN',
-        success: true
-      });
-    }
     const hashedPassword = validated.password
       ? await bcrypt.hash(validated.password, 10)
       : null;
